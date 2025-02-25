@@ -31,8 +31,8 @@ open class ZoomAnimatedTransitioningDelegate: NSObject, UIViewControllerTransiti
         - parameter slideshowController: FullScreenViewController instance to animate the transition to
      */
     public init(slideshowView: ImageSlideshow, slideshowController: FullScreenSlideshowViewController) {
-        self.referenceSlideshowView = slideshowView
-        self.referenceSlideshowController = slideshowController
+        referenceSlideshowView = slideshowView
+        referenceSlideshowController = slideshowController
 
         super.init()
 
@@ -45,8 +45,8 @@ open class ZoomAnimatedTransitioningDelegate: NSObject, UIViewControllerTransiti
         - parameter slideshowController: FullScreenViewController instance to animate the transition to
      */
     public init(imageView: UIImageView, slideshowController: FullScreenSlideshowViewController) {
-        self.referenceImageView = imageView
-        self.referenceSlideshowController = slideshowController
+        referenceImageView = imageView
+        referenceSlideshowController = slideshowController
 
         super.init()
 
@@ -66,7 +66,11 @@ open class ZoomAnimatedTransitioningDelegate: NSObject, UIViewControllerTransiti
             return
         }
 
-        let percent = min(max(abs(gesture.translation(in: gesture.view!).y) / 200.0, 0.0), 1.0)
+        guard let gestureView = gesture.view else {
+            return
+        }
+
+        let percent = min(max(abs(gesture.translation(in: gestureView).y) / 200.0, 0.0), 1.0)
 
         if gesture.state == .began {
             interactionController = UIPercentDrivenInteractiveTransition()
@@ -96,7 +100,7 @@ open class ZoomAnimatedTransitioningDelegate: NSObject, UIViewControllerTransiti
         }
     }
 
-    open func animationController(forPresented presented: UIViewController, presenting: UIViewController, source: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+    open func animationController(forPresented _: UIViewController, presenting _: UIViewController, source _: UIViewController) -> UIViewControllerAnimatedTransitioning? {
         if let reference = referenceSlideshowView {
             return ZoomInAnimator(referenceSlideshowView: reference, parent: self)
         } else if let reference = referenceImageView {
@@ -106,7 +110,7 @@ open class ZoomAnimatedTransitioningDelegate: NSObject, UIViewControllerTransiti
         }
     }
 
-    open func animationController(forDismissed dismissed: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+    open func animationController(forDismissed _: UIViewController) -> UIViewControllerAnimatedTransitioning? {
         if let reference = referenceSlideshowView {
             return ZoomOutAnimator(referenceSlideshowView: reference, parent: self)
         } else if let reference = referenceImageView {
@@ -116,15 +120,15 @@ open class ZoomAnimatedTransitioningDelegate: NSObject, UIViewControllerTransiti
         }
     }
 
-    open func interactionControllerForPresentation(using animator: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
+    open func interactionControllerForPresentation(using _: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
         return interactionController
     }
 
-    open func interactionControllerForDismissal(using animator: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
+    open func interactionControllerForDismissal(using _: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
         return interactionController
     }
 
-    public func presentationController(forPresented presented: UIViewController, presenting: UIViewController?, source: UIViewController) -> UIPresentationController? {
+    public func presentationController(forPresented presented: UIViewController, presenting: UIViewController?, source _: UIViewController) -> UIPresentationController? {
         return PresentationController(presentedViewController: presented, presenting: presenting)
     }
 }
@@ -161,14 +165,13 @@ extension ZoomAnimatedTransitioningDelegate: UIGestureRecognizerDelegate {
 
 @objcMembers
 class ZoomAnimator: NSObject {
-
     var referenceImageView: UIImageView?
     var referenceSlideshowView: ImageSlideshow?
     var parent: ZoomAnimatedTransitioningDelegate
 
     init(referenceSlideshowView: ImageSlideshow, parent: ZoomAnimatedTransitioningDelegate) {
         self.referenceSlideshowView = referenceSlideshowView
-        self.referenceImageView = referenceSlideshowView.currentSlideshowItem?.imageView
+        referenceImageView = referenceSlideshowView.currentSlideshowItem?.imageView
         self.parent = parent
         super.init()
     }
@@ -182,14 +185,13 @@ class ZoomAnimator: NSObject {
 
 @objcMembers
 class ZoomInAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
-
-    func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
+    func transitionDuration(using _: UIViewControllerContextTransitioning?) -> TimeInterval {
         return 0.5
     }
 
     func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
         // Pauses slideshow
-        self.referenceSlideshowView?.pauseTimer()
+        referenceSlideshowView?.pauseTimer()
 
         let containerView = transitionContext.containerView
         let fromViewController = transitionContext.viewController(forKey: UITransitionContextViewControllerKey.from)!
@@ -205,9 +207,9 @@ class ZoomInAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
         containerView.addSubview(transitionBackgroundView)
 
         #if swift(>=4.2)
-        containerView.sendSubviewToBack(transitionBackgroundView)
+            containerView.sendSubviewToBack(transitionBackgroundView)
         #else
-        containerView.sendSubview(toBack: transitionBackgroundView)
+            containerView.sendSubview(toBack: transitionBackgroundView)
         #endif
 
         let finalFrame = toViewController.view.frame
@@ -220,7 +222,7 @@ class ZoomInAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
             transitionView!.clipsToBounds = true
             transitionView!.frame = containerView.convert(referenceImageView.bounds, from: referenceImageView)
             containerView.addSubview(transitionView!)
-            self.parent.referenceSlideshowViewFrame = transitionView!.frame
+            parent.referenceSlideshowViewFrame = transitionView!.frame
 
             referenceImageView.alpha = 0
 
@@ -239,7 +241,7 @@ class ZoomInAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
             fromViewController.view.alpha = 0
             transitionView?.frame = transitionViewFinalFrame
             transitionView?.center = CGPoint(x: finalFrame.midX, y: finalFrame.midY)
-        }, completion: {[ref = self.referenceImageView] _ in
+        }, completion: { [ref = self.referenceImageView] _ in
             fromViewController.view.alpha = 1
             ref?.alpha = 1
             transitionView?.removeFromSuperview()
@@ -251,10 +253,9 @@ class ZoomInAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
 }
 
 class ZoomOutAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
-
     private var animatorForCurrentTransition: UIViewImplicitlyAnimating?
 
-    func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
+    func transitionDuration(using _: UIViewControllerContextTransitioning?) -> TimeInterval {
         return 0.25
     }
 
@@ -319,9 +320,9 @@ class ZoomOutAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
         transitionBackgroundView.backgroundColor = fromViewController.backgroundColor
         containerView.addSubview(transitionBackgroundView)
         #if swift(>=4.2)
-        containerView.sendSubviewToBack(transitionBackgroundView)
+            containerView.sendSubviewToBack(transitionBackgroundView)
         #else
-        containerView.sendSubview(toBack: transitionBackgroundView)
+            containerView.sendSubview(toBack: transitionBackgroundView)
         #endif
 
         let transitionView = UIImageView(image: fromViewController.slideshow.currentSlideshowItem?.imageView.image)
